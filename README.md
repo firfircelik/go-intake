@@ -1,4 +1,4 @@
-# intake
+# go-intake
 
 A Go-native, **library-first** toolkit for turning unknown or
 messy input data into validated, transformed, record-oriented
@@ -33,7 +33,7 @@ between there is normalisation, parsing, validation, and the
 occasional quarantine of bad rows. That work is small in any
 single project, but it is the same work every time.
 
-`intake` is a small library that codifies that work. It gives
+`go-intake` is a small library that codifies that work. It gives
 you:
 
 - A handful of small, composable interfaces (`Source`, `Sink`,
