@@ -1,0 +1,31 @@
+# Compiled binaries
+/intake
+/csv_to_jsonl
+/inspect_csv
+/*.exe
+/*.exe~
+/*.dll
+/*.so
+/*.dylib
+
+# Test binaries / profiles
+*.test
+*.out
+coverage.out
+coverage.html
+
+# Go workspace files
+go.work
+go.work.sum
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Local tool files
+.poolside/
+.gitattributes

@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (Go ${{ matrix.go }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go: ["1.23", "1.24"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+          cache: true
+
+      - name: gofmt
+        run: |
+          if [ "$(gofmt -l . | wc -l)" -ne 0 ]; then
+            echo "Files not gofmt'd:"
+            gofmt -l .
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test
+        run: go test -count=1 ./...
+
+      - name: go test -race
+        run: go test -race -count=1 ./...
+
+      - name: build examples
+        run: go build ./examples/...
+
+      - name: smoke-test csv_to_jsonl example
+        run: |
+          go run ./examples/csv_to_jsonl examples/csv_to_jsonl/sample.csv /tmp/out.jsonl /tmp/bad.jsonl
+          test -s /tmp/out.jsonl
+          test -s /tmp/bad.jsonl
+          rm -f /tmp/out.jsonl /tmp/bad.jsonl
+
+      - name: smoke-test inspect_csv example
+        run: |
+          go run ./examples/inspect_csv examples/inspect_csv/messy.csv > /tmp/profile.txt
+          test -s /tmp/profile.txt
+          rm -f /tmp/profile.txt
