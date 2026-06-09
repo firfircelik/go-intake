@@ -253,11 +253,14 @@ calls `Open` once, `Read` until it returns `io.EOF`, and
 |---|---|---|
 | CSV | `source.CSV(path)` / `source.NewCSVSource(r)` | RFC 4180 CSV with a header row. `Comma(rune)`, `SkipEmptyLines(bool)`. |
 | JSONL | `source.JSONL(path)` / `source.NewJSONLSource(r)` | Newline-delimited JSON. Each non-empty line is decoded as a `Record`. |
+| **FileTail** | `streaming.NewFileTailSource(path)` | Tails files for new lines (log monitoring). `WithTailDelay(d)`. |
 
 | Sink | Constructor | Notes |
 |---|---|---|
 | CSV | `sink.CSV(path)` | `WithHeaders(...)` to control column order; `Comma(rune)`. |
 | JSONL | `sink.JSONL(path)` | One JSON object per line. |
+| **S3** | `cloud.NewS3Sink(bucket, key)` | AWS S3 upload. `WithS3Region(region)`. |
+| **SQLite** | `db.NewSQLiteSink(dsn, table)` | SQLite database. Auto-creates table. |
 
 | Quarantine | Constructor | Notes |
 |---|---|---|
@@ -278,6 +281,8 @@ calls `Open` once, `Read` until it returns `io.EOF`, and
 | `transform.Drop(fields...)` / `Keep(fields...)` | Remove or restrict fields. |
 | `transform.AddField(field, value)` | Set a field to a constant value. |
 | `transform.MapField(field, fn)` | Apply a user function `func(any) (any, error)` to a field's value. |
+| **enrich.CacheLookup** | Enrich records with cached lookup values. |
+| **enrich.StaticMapEnrich** | Map field values to static values. |
 
 **Contract:** every transformer in this package never mutates
 the input record. `Apply` always returns a fresh `Record`, even
@@ -437,6 +442,49 @@ current proposals.
 - A connector marketplace or plugin loader.
 - A PDF parser, OCR frontend, ML feature store, or anything
   that would require a non-stdlib dependency.
+
+## Example: Log monitoring pipeline
+
+Real-time log processing with streaming source:
+
+```go
+// Monitor application logs in real-time
+p := intake.New().
+    From(streaming.NewFileTailSource("/var/log/app.log")).
+    Transform(enrich.NewStaticMapEnrich("level", "level_name", map[string]string{
+        "ERROR": "Critical",
+        "WARN":  "Warning",
+    })).
+    Validate(validate.Required("line")).
+    To(sink.JSONL("processed_logs.jsonl"))
+```
+
+## Example: Database export pipeline
+
+Export validated data to database:
+
+```go
+// Export to SQLite
+db, _ := db.NewSQLiteSink("file:data.db", "users")
+p := intake.New().
+    From(source.CSV("users.csv")).
+    Transform(transform.ParseInt("age")).
+    Validate(validate.Min("age", 18)).
+    To(db)
+```
+
+## Example: Observability
+
+Monitor pipeline metrics:
+
+```go
+// Prometheus metrics
+exporter := metrics.NewPrometheusExporter(":8080")
+collector := metrics.NewMetricsCollector(exporter)
+collector.Collect(func() intake.Stats {
+    return pipeline.Stats()
+})
+```
 
 ## Quality gates
 
